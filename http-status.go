@@ -160,50 +160,6 @@ func printRange(n int, printLong bool) {
 	}
 }
 
-func printCode(c *cli.Context, printLong bool) error {
-	if code := c.Args().First(); code != "" {
-		n, err := strconv.Atoi(code)
-		if err != nil {
-			return fmt.Errorf("'%s' is not a valid HTTP status code: not a number", code)
-		}
-		if http.StatusText(n) == "" {
-			return fmt.Errorf("'%d' is not a valid HTTP status code: out of range", n)
-		}
-		fmt.Printf("%d %s\n", n, http.StatusText(n))
-		if printLong {
-			fmt.Printf("%s\n\n", longReasons[n])
-		}
-		return nil
-	}
-	return nil
-}
-
-func printCodeGroups(c *cli.Context, printLong bool) {
-	if c.Bool("1") {
-		printRange(1, printLong)
-	}
-	if c.Bool("2") {
-		printRange(2, printLong)
-	}
-	if c.Bool("3") {
-		printRange(3, printLong)
-	}
-	if c.Bool("4") {
-		printRange(4, printLong)
-	}
-	if c.Bool("5") {
-		printRange(5, printLong)
-	}
-}
-
-func printCodes(c *cli.Context, printLong bool) error {
-	if err := printCode(c, printLong); err != nil {
-		return err
-	}
-	printCodeGroups(c, printLong)
-	return nil
-}
-
 func main() {
 	app := &cli.App{
 		Name:  "http-status",
@@ -237,7 +193,26 @@ func main() {
 		},
 		EnableBashCompletion: true,
 		Action: func(c *cli.Context) error {
-			return printCodes(c, c.Bool("l"))
+			for _, code := range c.Args().Slice() {
+				n, err := strconv.Atoi(code)
+				if err != nil {
+					return fmt.Errorf("'%s' is not a number", code)
+				}
+				if http.StatusText(n) == "" {
+					return fmt.Errorf("'%d' is out of range", n)
+				}
+				fmt.Printf("%d %s\n", n, http.StatusText(n))
+				if c.Bool("l") {
+					fmt.Printf("%s\n\n", longReasons[n])
+				}
+			}
+
+			for statusRange := 1; statusRange <= 5; statusRange++ {
+				if c.Bool(strconv.Itoa(statusRange)) {
+					printRange(statusRange, c.Bool("l"))
+				}
+			}
+			return nil
 		},
 		Version: "0.1.0",
 	}
